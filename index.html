@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arithamaniac - Minimalist Number Merge Puzzle</title>
+    <meta name="description" content="Arithamaniac is an addictive minimalist arithmetic puzzle game. Combine grid tiles with math operations to match target numbers!">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header & Stats -->
+        <header class="game-header">
+            <div class="brand">
+                <h1 class="logo">ARITHA<span class="highlight">MANIAC</span></h1>
+                <span class="badge" id="mode-badge">ADDITION</span>
+            </div>
+            
+            <div class="stats-bar">
+                <div class="stat-box">
+                    <span class="stat-label">SCORE</span>
+                    <span class="stat-value" id="score-display">0</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">COMBO</span>
+                    <span class="stat-value" id="combo-display">x1</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">MOVES</span>
+                    <span class="stat-value" id="moves-display">20</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">BEST</span>
+                    <span class="stat-value" id="best-display">0</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Mode & Grid Settings Toolbar -->
+        <div class="controls-toolbar">
+            <div class="mode-selector">
+                <button class="mode-btn active" data-mode="add" title="Addition Mode">+</button>
+                <button class="mode-btn" data-mode="sub" title="Subtraction Mode">−</button>
+                <button class="mode-btn" data-mode="mul" title="Multiplication Mode">×</button>
+                <button class="mode-btn" data-mode="div" title="Division Mode">÷</button>
+                <button class="mode-btn" data-mode="mix" title="Mixed Operations Mode">±×</button>
+            </div>
+            
+            <div class="right-toolbar">
+                <div class="grid-size-toggle">
+                    <button class="size-btn active" data-size="4">4×4</button>
+                    <button class="size-btn" data-size="5">5×5</button>
+                </div>
+                <button class="icon-btn" id="sound-toggle" title="Toggle Sound">🔊</button>
+                <button class="icon-btn" id="restart-btn" title="Restart Game">🔄</button>
+                <button class="icon-btn" id="help-btn" title="How to Play">❓</button>
+            </div>
+        </div>
+
+        <!-- Target Cards Section -->
+        <section class="targets-container">
+            <div class="targets-header">
+                <span class="targets-title">TARGET NUMBERS</span>
+                <span class="targets-sub">Combine grid tiles to match these values</span>
+            </div>
+            <div class="targets-list" id="targets-list">
+                <!-- Target cards rendered dynamically -->
+            </div>
+        </section>
+
+        <!-- Main Game Board -->
+        <main class="board-wrapper">
+            <div class="grid-container grid-4x4" id="grid-container">
+                <!-- Grid tiles rendered dynamically -->
+            </div>
+        </main>
+
+        <!-- Dynamic Feedback Message -->
+        <div class="toast-container" id="toast-container"></div>
+
+        <!-- How to Play Modal -->
+        <div class="modal-overlay" id="help-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>How to Play Arithamaniac</h2>
+                    <button class="close-btn" id="close-help">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="rule-item">
+                        <div class="rule-num">1</div>
+                        <p><strong>Select & Combine:</strong> Click a source tile, then click a target tile to combine them using the selected mode's math operation (e.g. <code>4 + 3 = 7</code>).</p>
+                    </div>
+                    <div class="rule-item">
+                        <div class="rule-num">2</div>
+                        <p><strong>Match Targets:</strong> Match any of the active <strong>Target Numbers</strong> shown at the top. Matching a target clears it, awards big score bonuses, and refills your moves!</p>
+                    </div>
+                    <div class="rule-item">
+                        <div class="rule-num">3</div>
+                        <p><strong>Spawning & Operations:</strong> Every valid move combines tiles and spawns a new random number in an empty cell. Use arithmetic wisely!</p>
+                    </div>
+                    <div class="rule-item">
+                        <div class="rule-num">4</div>
+                        <p><strong>Modes:</strong> Switch between <strong>Addition (+)</strong>, <strong>Subtraction (−)</strong>, <strong>Multiplication (×)</strong>, <strong>Division (÷)</strong>, or <strong>Mixed (±×)</strong> for different challenges.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-primary" id="start-playing-btn">Got It, Let's Play!</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Over Modal -->
+        <div class="modal-overlay" id="gameover-modal">
+            <div class="modal-content text-center">
+                <h2 id="gameover-title">GAME OVER</h2>
+                <p id="gameover-reason" class="modal-subtext">No moves remaining!</p>
+                <div class="final-stats">
+                    <div class="final-stat">
+                        <span class="final-val" id="final-score">0</span>
+                        <span class="final-lbl">Final Score</span>
+                    </div>
+                    <div class="final-stat">
+                        <span class="final-val" id="final-targets">0</span>
+                        <span class="final-lbl">Targets Cleared</span>
+                    </div>
+                    <div class="final-stat">
+                        <span class="final-val" id="final-max-combo">x1</span>
+                        <span class="final-lbl">Max Combo</span>
+                    </div>
+                </div>
+                <button class="btn-primary btn-lg" id="play-again-btn">Play Again 🚀</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Canvas for Particle FX -->
+    <canvas id="particle-canvas"></canvas>
+
+    <script src="game.js"></script>
+</body>
+</html>
