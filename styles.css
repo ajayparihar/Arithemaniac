@@ -9,10 +9,10 @@
     --text-muted: #94a3b8;
     --text-dim: #64748b;
 
-    --accent-add: #10b981;
-    --accent-sub: #ef4444;
+    --accent-add: #0ace13;
+    --accent-sub: #f31414;
     --accent-mul: #3b82f6;
-    --accent-div: #f97316;
+    --accent-div: #f9e216;
     --accent-mix: #ec4899;
 
     --current-accent: #ec4899;
@@ -110,6 +110,17 @@ body {
     background: rgba(255, 255, 255, 0.12);
 }
 
+.stat-card.danger {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), var(--bg-card)) !important;
+    border-color: rgba(239, 68, 68, 0.6) !important;
+    animation: dangerPulse 0.7s ease infinite;
+}
+
+@keyframes dangerPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.0); }
+    50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.3); }
+}
+
 /* Stats HUD */
 .stats-bar {
     display: grid;
@@ -133,6 +144,27 @@ body {
 .stat-card.moves-card {
     background: linear-gradient(135deg, rgba(236, 72, 153, 0.15), var(--bg-card));
     border-color: rgba(236, 72, 153, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.health-bar-container {
+    width: 100%;
+    height: 5px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 3px;
+    margin-top: 5px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.health-bar-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #ec4899 0%, #f43f5e 100%);
+    border-radius: 3px;
+    transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
+    box-shadow: 0 0 8px rgba(236, 72, 153, 0.6);
 }
 
 .stat-card.combo-card {
@@ -325,6 +357,13 @@ body {
     border-color: var(--current-accent);
     box-shadow: 0 0 20px var(--current-glow), inset 0 0 10px var(--current-glow);
     transform: scale(1.05);
+    z-index: 2;
+}
+
+/* Destination tile highlight state - selection border on result tile */
+.grid-cell.destination-selected {
+    border-color: var(--current-accent);
+    box-shadow: 0 0 20px var(--current-glow), inset 0 0 10px var(--current-glow);
     z-index: 2;
 }
 

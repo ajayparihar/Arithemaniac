@@ -174,16 +174,25 @@ class ParticleEngine {
     }
 }
 
+const GAME_CONFIG = Object.freeze({
+    INITIAL_MOVES: 10,       // Default starting health/moves balance
+    MAX_MOVES_CAP: 30,       // Max health bar display capacity
+    MOVE_COST: 1,            // Health/Moves cost per operation (miss)
+    TARGET_REWARD: 3,        // Health/Moves awarded on target hit
+    LOW_MOVES_THRESHOLD: 5   // Danger threshold for low health
+});
+
 class ArithamaniacGame {
     constructor() {
         this.gridSize = 4; // 4x4 default
         this.mode = 'mix'; // Mixed mode only
         this.grid = [];
         this.selectedIdx = null;
+        this.lastDestinationIdx = null;
         
         this.score = 0;
         this.bestScore = 0;
-        this.movesLeft = 20;
+        this.movesLeft = GAME_CONFIG.INITIAL_MOVES;
         this.combo = 1;
         this.maxCombo = 1;
         this.targetsCleared = 0;
@@ -206,6 +215,8 @@ class ArithamaniacGame {
         this.scoreDisplay = document.getElementById('score-display');
         this.comboDisplay = document.getElementById('combo-display');
         this.movesDisplay = document.getElementById('moves-display');
+        this.healthBarFill = document.getElementById('health-bar-fill');
+        this.movesCard = document.getElementById('moves-card');
         this.bestDisplay = document.getElementById('best-display');
         this.toastContainer = document.getElementById('toast-container');
 
@@ -279,17 +290,36 @@ class ArithamaniacGame {
         }
     }
 
+    updateMovesDisplay() {
+        if (this.movesDisplay) {
+            this.movesDisplay.textContent = this.movesLeft;
+        }
+        if (this.healthBarFill) {
+            const pct = Math.min(100, Math.max(0, (this.movesLeft / GAME_CONFIG.MAX_MOVES_CAP) * 100));
+            this.healthBarFill.style.width = `${pct}%`;
+        }
+        const card = this.movesCard || (this.movesDisplay ? this.movesDisplay.closest('.stat-card') : null);
+        if (card) {
+            if (this.movesLeft <= GAME_CONFIG.LOW_MOVES_THRESHOLD && this.movesLeft > 0) {
+                card.classList.add('danger');
+            } else {
+                card.classList.remove('danger');
+            }
+        }
+    }
+
     startNewGame() {
         this.score = 0;
-        this.movesLeft = 20;
+        this.movesLeft = GAME_CONFIG.INITIAL_MOVES;
         this.combo = 1;
         this.maxCombo = 1;
         this.targetsCleared = 0;
         this.selectedIdx = null;
+        this.lastDestinationIdx = null;
 
         this.scoreDisplay.textContent = '0';
         this.comboDisplay.textContent = 'x1';
-        this.movesDisplay.textContent = this.movesLeft;
+        this.updateMovesDisplay();
 
         // Configure Grid (Fixed 4x4 = 16 cells)
         const totalCells = this.gridSize * this.gridSize;
@@ -512,6 +542,7 @@ class ArithamaniacGame {
         if (this.selectedIdx === null) {
             if (tileVal !== null) {
                 this.selectedIdx = idx;
+                this.lastDestinationIdx = null; // Clear previous destination highlight when selecting a tile
                 this.audio.playSelect();
                 this.renderGrid();
             }
@@ -521,6 +552,7 @@ class ArithamaniacGame {
         // 2. If clicking the already selected tile -> Deselect
         if (this.selectedIdx === idx) {
             this.selectedIdx = null;
+            this.lastDestinationIdx = null;
             this.audio.playDeselect();
             this.renderGrid();
             return;
@@ -533,6 +565,7 @@ class ArithamaniacGame {
         if (tileVal === null) {
             // Cannot combine into empty cell directly, deselect
             this.selectedIdx = null;
+            this.lastDestinationIdx = null;
             this.audio.playDeselect();
             this.renderGrid();
             return;
@@ -545,14 +578,12 @@ class ArithamaniacGame {
             this.audio.playError();
             this.showToast('Invalid Operation!', 'error');
             this.selectedIdx = null;
+            this.lastDestinationIdx = null;
             this.renderGrid();
             return;
         }
 
         // --- VALID MOVE EXECUTION ---
-        this.movesLeft--;
-        this.movesDisplay.textContent = this.movesLeft;
-
         // Perform merge
         this.grid[sourceIdx] = null;
         this.grid[idx] = resultTile;
@@ -564,23 +595,41 @@ class ArithamaniacGame {
         const resultNumeric = resultTile.getNumericValue();
         const matchedTargetIdx = this.targetCards.findIndex(t => Math.abs(t - resultNumeric) < 0.001);
         let wasTargetMatched = false;
+        let spawnedIndices = [];
 
         if (matchedTargetIdx !== -1) {
             wasTargetMatched = true;
+            // ✅ TARGET MATCH: remove merged result tile from board (reward = board space!)
+            this.grid[idx] = null;
+            this.lastDestinationIdx = null; // Tile cleared, no destination highlight needed
             this.handleTargetMatch(matchedTargetIdx, resultNumeric, idx);
+            // Spawn 0 extra tiles — board gets lighter as reward!
         } else {
-            // Reset combo if turn didn't match a target
+            // ❌ MISS / Regular Operation: Subtract move cost from Health Bar
+            this.movesLeft = Math.max(0, this.movesLeft - GAME_CONFIG.MOVE_COST);
+            this.lastDestinationIdx = idx; // Destination tile receives selection border highlight!
+
+            // Combo resets
+            const hadCombo = this.combo > 1;
             this.combo = 1;
             this.comboDisplay.textContent = 'x1';
+            if (hadCombo) {
+                this.showToast('COMBO LOST! 💔', 'error');
+            }
+
+            // ⚡ DYNAMIC SPAWNING RATIO: spawn 2 new tiles to escalate board pressure!
+            const spawn1 = this.spawnRandomTile();
+            const spawn2 = this.spawnRandomTile();
+            if (spawn1 !== null) spawnedIndices.push(spawn1);
+            if (spawn2 !== null) spawnedIndices.push(spawn2);
         }
 
-        // Spawn a new tile into an empty slot
-        const newSpawnIdx = this.spawnRandomTile();
+        this.updateMovesDisplay();
 
         // Check if any existing board tile happens to match any target card
         this.checkAllBoardTargets();
 
-        this.renderGrid(idx, newSpawnIdx);
+        this.renderGrid(idx, spawnedIndices[0], spawnedIndices[1]);
         this.renderTargets();
 
         // Check Game Over Condition
@@ -607,10 +656,10 @@ class ArithamaniacGame {
         this.score += bonus;
         this.scoreDisplay.textContent = this.score;
 
-        // Add extra moves (+5 moves!)
-        const extraMoves = 5;
-        this.movesLeft += extraMoves;
-        this.movesDisplay.textContent = this.movesLeft;
+        // Health Bar Reward: Add extra moves based on constant
+        const extraMoves = GAME_CONFIG.TARGET_REWARD;
+        this.movesLeft = Math.min(GAME_CONFIG.MAX_MOVES_CAP, this.movesLeft + extraMoves);
+        this.updateMovesDisplay();
 
         // Increment Combo
         this.combo++;
@@ -684,7 +733,7 @@ class ArithamaniacGame {
         });
     }
 
-    renderGrid(mergedIdx = null, spawnedIdx = null) {
+    renderGrid(mergedIdx = null, spawnedIdx = null, spawned2Idx = null) {
         this.gridContainer.innerHTML = '';
         this.grid.forEach((rawItem, idx) => {
             const cell = document.createElement('div');
@@ -711,10 +760,13 @@ class ArithamaniacGame {
                 if (idx === this.selectedIdx) {
                     cell.classList.add('selected');
                 }
+                if (idx === this.lastDestinationIdx && idx !== this.selectedIdx) {
+                    cell.classList.add('destination-selected');
+                }
                 if (idx === mergedIdx) {
                     cell.classList.add('tile-merged');
                 }
-                if (idx === spawnedIdx) {
+                if (idx === spawnedIdx || idx === spawned2Idx) {
                     cell.classList.add('tile-spawn');
                 }
             }
