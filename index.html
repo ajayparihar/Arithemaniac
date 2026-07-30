@@ -2,61 +2,43 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arithamaniac - Minimalist Number Merge Puzzle</title>
-    <meta name="description" content="Arithamaniac is an addictive minimalist arithmetic puzzle game. Combine grid tiles with math operations to match target numbers!">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Arithamaniac - Math Merge Puzzle</title>
+    <meta name="description" content="Arithamaniac is an addictive mobile arithmetic merge puzzle game. Combine numbers with math operations to match target values!">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="app-container">
-        <!-- Header & Stats -->
-        <header class="game-header">
+        <!-- Minimal Mobile Top Header -->
+        <header class="top-nav">
             <div class="brand">
                 <h1 class="logo">ARITHA<span class="highlight">MANIAC</span></h1>
-                <span class="badge" id="mode-badge">ADDITION</span>
             </div>
-            
-            <div class="stats-bar">
-                <div class="stat-box">
-                    <span class="stat-label">SCORE</span>
-                    <span class="stat-value" id="score-display">0</span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-label">COMBO</span>
-                    <span class="stat-value" id="combo-display">x1</span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-label">MOVES</span>
-                    <span class="stat-value" id="moves-display">20</span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-label">BEST</span>
-                    <span class="stat-value" id="best-display">0</span>
-                </div>
+            <div class="nav-actions">
+                <button class="icon-btn settings-btn" id="settings-btn" title="Settings & Menu">⚙️</button>
             </div>
         </header>
 
-        <!-- Mode & Grid Settings Toolbar -->
-        <div class="controls-toolbar">
-            <div class="mode-selector">
-                <button class="mode-btn active" data-mode="add" title="Addition Mode">+</button>
-                <button class="mode-btn" data-mode="sub" title="Subtraction Mode">−</button>
-                <button class="mode-btn" data-mode="mul" title="Multiplication Mode">×</button>
-                <button class="mode-btn" data-mode="div" title="Division Mode">÷</button>
-                <button class="mode-btn" data-mode="mix" title="Mixed Operations Mode">±×</button>
+        <!-- Compact Stats HUD -->
+        <div class="stats-bar">
+            <div class="stat-card">
+                <span class="stat-label">SCORE</span>
+                <span class="stat-value" id="score-display">0</span>
             </div>
-            
-            <div class="right-toolbar">
-                <div class="grid-size-toggle">
-                    <button class="size-btn active" data-size="4">4×4</button>
-                    <button class="size-btn" data-size="5">5×5</button>
-                </div>
-                <button class="icon-btn" id="sound-toggle" title="Toggle Sound">🔊</button>
-                <button class="icon-btn" id="restart-btn" title="Restart Game">🔄</button>
-                <button class="icon-btn" id="help-btn" title="How to Play">❓</button>
+            <div class="stat-card combo-card">
+                <span class="stat-label">COMBO</span>
+                <span class="stat-value" id="combo-display">x1</span>
+            </div>
+            <div class="stat-card moves-card">
+                <span class="stat-label">MOVES</span>
+                <span class="stat-value" id="moves-display">20</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">BEST</span>
+                <span class="stat-value" id="best-display">0</span>
             </div>
         </div>
 
@@ -64,7 +46,7 @@
         <section class="targets-container">
             <div class="targets-header">
                 <span class="targets-title">TARGET NUMBERS</span>
-                <span class="targets-sub">Combine grid tiles to match these values</span>
+                <span class="targets-sub">Merge tiles to match</span>
             </div>
             <div class="targets-list" id="targets-list">
                 <!-- Target cards rendered dynamically -->
@@ -81,33 +63,53 @@
         <!-- Dynamic Feedback Message -->
         <div class="toast-container" id="toast-container"></div>
 
+        <!-- Settings & Pause Menu Modal -->
+        <div class="modal-overlay" id="settings-modal">
+            <div class="modal-content menu-modal">
+                <div class="modal-header">
+                    <h2>Game Menu</h2>
+                    <button class="close-btn" id="close-settings">&times;</button>
+                </div>
+                <div class="modal-body settings-options">
+                    <button class="menu-item-btn" id="sound-toggle-btn">
+                        <span class="menu-icon" id="sound-icon">🔊</span>
+                        <span class="menu-text" id="sound-text">Sound Effects: ON</span>
+                    </button>
+                    <button class="menu-item-btn" id="menu-restart-btn">
+                        <span class="menu-icon">🔄</span>
+                        <span class="menu-text">Restart Game</span>
+                    </button>
+                    <button class="menu-item-btn" id="menu-help-btn">
+                        <span class="menu-icon">❓</span>
+                        <span class="menu-text">How to Play</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- How to Play Modal -->
         <div class="modal-overlay" id="help-modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>How to Play Arithamaniac</h2>
+                    <h2>How to Play</h2>
                     <button class="close-btn" id="close-help">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="rule-item">
                         <div class="rule-num">1</div>
-                        <p><strong>Select & Combine:</strong> Click a source tile, then click a target tile to combine them using the selected mode's math operation (e.g. <code>4 + 3 = 7</code>).</p>
+                        <p><strong>Select & Combine:</strong> Click a tile, then click another tile to perform math operations (+, −, ×, ÷).</p>
                     </div>
                     <div class="rule-item">
                         <div class="rule-num">2</div>
-                        <p><strong>Match Targets:</strong> Match any of the active <strong>Target Numbers</strong> shown at the top. Matching a target clears it, awards big score bonuses, and refills your moves!</p>
+                        <p><strong>Match Targets:</strong> Combine tiles to produce exact <strong>Target Numbers</strong>. Matching targets awards score bonuses & +5 extra moves!</p>
                     </div>
                     <div class="rule-item">
                         <div class="rule-num">3</div>
-                        <p><strong>Spawning & Operations:</strong> Every valid move combines tiles and spawns a new random number in an empty cell. Use arithmetic wisely!</p>
-                    </div>
-                    <div class="rule-item">
-                        <div class="rule-num">4</div>
-                        <p><strong>Modes:</strong> Switch between <strong>Addition (+)</strong>, <strong>Subtraction (−)</strong>, <strong>Multiplication (×)</strong>, <strong>Division (÷)</strong>, or <strong>Mixed (±×)</strong> for different challenges.</p>
+                        <p><strong>Tile Operations:</strong> Tiles feature operations: <strong>Green (+)</strong> Addition, <strong>Red (−)</strong> Subtraction, <strong>Blue (×)</strong> Multiplication, and <strong>Orange (÷)</strong> Division.</p>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn-primary" id="start-playing-btn">Got It, Let's Play!</button>
+                    <button class="btn-primary" id="start-playing-btn">Got It!</button>
                 </div>
             </div>
         </div>
@@ -142,3 +144,4 @@
     <script src="game.js"></script>
 </body>
 </html>
+
