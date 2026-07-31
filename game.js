@@ -174,17 +174,9 @@ class ParticleEngine {
     }
 }
 
-const GAME_CONFIG = Object.freeze({
-    INITIAL_MOVES: 10,       // Default starting health/moves balance
-    MAX_MOVES_CAP: 30,       // Max health bar display capacity
-    MOVE_COST: 1,            // Health/Moves cost per operation (miss)
-    TARGET_REWARD: 3,        // Health/Moves awarded on target hit
-    LOW_MOVES_THRESHOLD: 5   // Danger threshold for low health
-});
-
 class ArithamaniacGame {
     constructor() {
-        this.gridSize = 4; // 4x4 default
+        this.gridSize = GAME_CONFIG.GRID_SIZE; // 4x4 default
         this.mode = 'mix'; // Mixed mode only
         this.grid = [];
         this.selectedIdx = null;
@@ -198,7 +190,7 @@ class ArithamaniacGame {
         this.targetsCleared = 0;
         
         this.targetCards = [];
-        this.numTargets = 3;
+        this.numTargets = GAME_CONFIG.NUM_TARGETS;
 
         this.audio = new AudioEngine();
         this.particles = new ParticleEngine('particle-canvas');
@@ -321,15 +313,15 @@ class ArithamaniacGame {
         this.comboDisplay.textContent = 'x1';
         this.updateMovesDisplay();
 
-        // Configure Grid (Fixed 4x4 = 16 cells)
+        // Configure Grid
         const totalCells = this.gridSize * this.gridSize;
         this.grid = new Array(totalCells).fill(null);
 
         // Update container grid class
-        this.gridContainer.className = 'grid-container grid-4x4';
+        this.gridContainer.className = `grid-container grid-${this.gridSize}x${this.gridSize}`;
 
-        // Initial Tile Population (populate ~45% of cells)
-        const initialCount = Math.floor(totalCells * 0.45);
+        // Initial Tile Population
+        const initialCount = Math.floor(totalCells * GAME_CONFIG.INITIAL_FILL_RATIO);
         for (let i = 0; i < initialCount; i++) {
             this.spawnRandomTile(true);
         }
@@ -348,7 +340,7 @@ class ArithamaniacGame {
         
         let spawnedTile = null;
 
-        if (activeTiles.length > 0 && activeTargets.length > 0 && Math.random() < 0.65) {
+        if (activeTiles.length > 0 && activeTargets.length > 0 && Math.random() < GAME_CONFIG.SMART_SPAWN_CHANCE) {
             const targetVal = activeTargets[Math.floor(Math.random() * activeTargets.length)];
             const boardTile = activeTiles[Math.floor(Math.random() * activeTiles.length)];
             const boardVal = Math.abs(boardTile.val);
@@ -357,23 +349,23 @@ class ArithamaniacGame {
 
             if (targetVal > boardVal) {
                 const diff = targetVal - boardVal;
-                if (diff >= 1 && diff <= 12) {
+                if (diff >= 1 && diff <= GAME_CONFIG.SMART_ADD_MAX_DIFF) {
                     candidates.push(new Tile({ val: Math.round(diff), type: 'normal' }));
                 }
                 if (boardVal > 0 && targetVal % boardVal === 0) {
                     const mult = targetVal / boardVal;
-                    if (mult >= 2 && mult <= 5) {
+                    if (mult >= GAME_CONFIG.SMART_MULT_MIN && mult <= GAME_CONFIG.SMART_MULT_MAX) {
                         candidates.push(new Tile({ val: mult, type: 'multiply' }));
                     }
                 }
             } else if (boardVal > targetVal) {
                 const subDiff = boardVal - targetVal;
-                if (subDiff >= 1 && subDiff <= 10) {
+                if (subDiff >= 1 && subDiff <= GAME_CONFIG.SMART_SUB_MAX_DIFF) {
                     candidates.push(new Tile({ val: Math.round(subDiff), type: 'negative' }));
                 }
                 if (targetVal > 0) {
                     const divFactor = Math.ceil(boardVal / targetVal);
-                    if (divFactor >= 2 && divFactor <= 6) {
+                    if (divFactor >= GAME_CONFIG.SMART_DIV_MIN && divFactor <= GAME_CONFIG.SMART_DIV_MAX) {
                         candidates.push(new Tile({ val: divFactor, type: 'divide' }));
                     }
                 }
@@ -387,15 +379,19 @@ class ArithamaniacGame {
         if (!spawnedTile) {
             // Balanced random tile spawning for Mix mode
             const randType = Math.random();
-            if (randType < 0.40) { // Normal (+)
-                spawnedTile = new Tile({ val: Math.floor(Math.random() * 8) + 1, type: 'normal' });
-            } else if (randType < 0.65) { // Negative (-) -> subtracts
-                spawnedTile = new Tile({ val: Math.floor(Math.random() * 6) + 1, type: 'negative' });
-            } else if (randType < 0.85) { // Multiplier (*) -> multiplies whole numbers
-                const mults = [2, 3, 4];
+            if (randType < GAME_CONFIG.PROB_NORMAL) { // Normal (+)
+                const min = GAME_CONFIG.NORMAL_TILE_MIN;
+                const max = GAME_CONFIG.NORMAL_TILE_MAX;
+                spawnedTile = new Tile({ val: Math.floor(Math.random() * (max - min + 1)) + min, type: 'normal' });
+            } else if (randType < GAME_CONFIG.PROB_NEGATIVE) { // Negative (-) -> subtracts
+                const min = GAME_CONFIG.NEGATIVE_TILE_MIN;
+                const max = GAME_CONFIG.NEGATIVE_TILE_MAX;
+                spawnedTile = new Tile({ val: Math.floor(Math.random() * (max - min + 1)) + min, type: 'negative' });
+            } else if (randType < GAME_CONFIG.PROB_MULTIPLY) { // Multiplier (*) -> multiplies whole numbers
+                const mults = GAME_CONFIG.MULTIPLY_VALUES;
                 spawnedTile = new Tile({ val: mults[Math.floor(Math.random() * mults.length)], type: 'multiply' });
-            } else { // Divider (/) -> divides taking ceiling (nearest bigger whole no)
-                const divs = [2, 3, 4];
+            } else { // Divider (/) -> divides taking ceiling
+                const divs = GAME_CONFIG.DIVIDE_VALUES;
                 spawnedTile = new Tile({ val: divs[Math.floor(Math.random() * divs.length)], type: 'divide' });
             }
         }
@@ -452,7 +448,7 @@ class ArithamaniacGame {
         }
 
         // Fallback target generation: must also filter out single numbers already on grid
-        const mixFallbacks = [2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 15, 16, 18, 20, 24];
+        const mixFallbacks = GAME_CONFIG.FALLBACK_TARGETS;
         const validFallbacks = mixFallbacks.filter(val => !activeGridValues.has(val) && !this.targetCards.includes(val));
         
         if (validFallbacks.length > 0) {
@@ -497,10 +493,6 @@ class ArithamaniacGame {
             if (valB === 0) return null;
             rawResult = Math.ceil(Math.abs(valA / valB));
         } else if (mode === 'mix') {
-            // Mix mode rules:
-            // 1. Negative operations:
-            //    - e.g. 5 (-1) -> 5 - 1 = 4
-            //    - e.g. (-1) 4 -> 1 - 4 = -3 -> absolute value gives 3
             if (tB.type === 'negative') {
                 rawResult = Math.abs(tA.val) - Math.abs(tB.val);
             } else if (tA.type === 'negative' && tB.type !== 'negative') {
@@ -524,12 +516,10 @@ class ArithamaniacGame {
 
         if (rawResult === null || isNaN(rawResult) || !isFinite(rawResult)) return null;
 
-        // "Always take absolute values"
         let finalVal = Math.abs(rawResult);
         if (finalVal <= 0) finalVal = 1;
         if (finalVal > 9999) return null;
 
-        // Result is always a whole number (taking ceiling/nearest bigger whole number for division)
         return new Tile({ val: Math.round(finalVal), type: 'normal' });
     }
 
@@ -599,11 +589,9 @@ class ArithamaniacGame {
 
         if (matchedTargetIdx !== -1) {
             wasTargetMatched = true;
-            // ✅ TARGET MATCH: remove merged result tile from board (reward = board space!)
-            this.grid[idx] = null;
-            this.lastDestinationIdx = null; // Tile cleared, no destination highlight needed
+            // ✅ TARGET MATCH: keep merged result tile on board for further operations
+            this.lastDestinationIdx = idx;
             this.handleTargetMatch(matchedTargetIdx, resultNumeric, idx);
-            // Spawn 0 extra tiles — board gets lighter as reward!
         } else {
             // ❌ MISS / Regular Operation: Subtract move cost from Health Bar
             this.movesLeft = Math.max(0, this.movesLeft - GAME_CONFIG.MOVE_COST);
@@ -616,12 +604,13 @@ class ArithamaniacGame {
             if (hadCombo) {
                 this.showToast('COMBO LOST! 💔', 'error');
             }
+        }
 
-            // ⚡ DYNAMIC SPAWNING RATIO: spawn 2 new tiles to escalate board pressure!
-            const spawn1 = this.spawnRandomTile();
-            const spawn2 = this.spawnRandomTile();
-            if (spawn1 !== null) spawnedIndices.push(spawn1);
-            if (spawn2 !== null) spawnedIndices.push(spawn2);
+        // Always spawn tiles after every operation (hit or miss) based on GAME_CONFIG
+        const countToSpawn = wasTargetMatched ? GAME_CONFIG.TILES_SPAWNED_ON_HIT : GAME_CONFIG.TILES_SPAWNED_ON_MISS;
+        for (let i = 0; i < countToSpawn; i++) {
+            const spawnIdx = this.spawnRandomTile();
+            if (spawnIdx !== null) spawnedIndices.push(spawnIdx);
         }
 
         this.updateMovesDisplay();
@@ -629,12 +618,12 @@ class ArithamaniacGame {
         // Check if any existing board tile happens to match any target card
         this.checkAllBoardTargets();
 
-        this.renderGrid(idx, spawnedIndices[0], spawnedIndices[1]);
+        this.renderGrid(idx, spawnedIndices);
         this.renderTargets();
 
         // Check Game Over Condition
         if (this.movesLeft <= 0 || this.isBoardStuck()) {
-            setTimeout(() => this.triggerGameOver(), 500);
+            setTimeout(() => this.triggerGameOver(), GAME_CONFIG.GAMEOVER_DELAY_MS);
         }
     }
 
@@ -646,13 +635,13 @@ class ArithamaniacGame {
         const targetEls = document.querySelectorAll('.target-card');
         if (targetEls[targetIdx]) {
             const rect = targetEls[targetIdx].getBoundingClientRect();
-            const accent = '#ec4899';
-            this.particles.burst(rect.left + rect.width / 2, rect.top + rect.height / 2, accent, 30);
+            const accent = GAME_CONFIG.PARTICLE_COLOR_TARGET;
+            this.particles.burst(rect.left + rect.width / 2, rect.top + rect.height / 2, accent, GAME_CONFIG.PARTICLE_COUNT_TARGET);
             targetEls[targetIdx].classList.add('matched');
         }
 
         // Score Calculation
-        const bonus = Math.round(targetValue * 10) * this.combo;
+        const bonus = Math.round(targetValue * GAME_CONFIG.SCORE_MULTIPLIER) * this.combo;
         this.score += bonus;
         this.scoreDisplay.textContent = this.score;
 
@@ -675,7 +664,7 @@ class ArithamaniacGame {
             const newTarget = this.generateSmartTarget();
             this.targetCards[targetIdx] = newTarget;
             this.renderTargets();
-        }, 300);
+        }, GAME_CONFIG.TARGET_REPLACE_DELAY_MS);
     }
 
     checkAllBoardTargets() {
@@ -714,8 +703,8 @@ class ArithamaniacGame {
         this.toastContainer.appendChild(toast);
         setTimeout(() => {
             toast.style.opacity = '0';
-            setTimeout(() => toast.remove(), 300);
-        }, 2200);
+            setTimeout(() => toast.remove(), GAME_CONFIG.TOAST_FADE_MS);
+        }, GAME_CONFIG.TOAST_DURATION_MS);
     }
 
     renderTargets() {
@@ -724,7 +713,7 @@ class ArithamaniacGame {
             const card = document.createElement('div');
             card.className = 'target-card';
             const displayVal = formatNum(val);
-            const rewardVal = Math.round(val * 10);
+            const rewardVal = Math.round(val * GAME_CONFIG.SCORE_MULTIPLIER);
             card.innerHTML = `
                 <span class="target-value">${displayVal}</span>
                 <span class="target-reward">+${rewardVal}</span>
@@ -735,6 +724,7 @@ class ArithamaniacGame {
 
     renderGrid(mergedIdx = null, spawnedIdx = null, spawned2Idx = null) {
         this.gridContainer.innerHTML = '';
+        const spawnedList = Array.isArray(spawnedIdx) ? spawnedIdx : [spawnedIdx, spawned2Idx].filter(x => x !== null);
         this.grid.forEach((rawItem, idx) => {
             const cell = document.createElement('div');
             cell.className = 'grid-cell';
@@ -766,7 +756,7 @@ class ArithamaniacGame {
                 if (idx === mergedIdx) {
                     cell.classList.add('tile-merged');
                 }
-                if (idx === spawnedIdx || idx === spawned2Idx) {
+                if (spawnedList.includes(idx)) {
                     cell.classList.add('tile-spawn');
                 }
             }
