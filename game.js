@@ -15,7 +15,7 @@ function formatNum(val) {
 class Tile {
     constructor({ val, type = 'normal', display = null }) {
         this.val = Math.abs(val); // Always store positive magnitude
-        this.type = type;         // 'normal' (+), 'negative' (−), 'multiply' (×), 'divide' (÷)
+        this.type = type;         // 'normal' (+), 'negative' (−)
         this._display = display;
     }
 
@@ -28,12 +28,7 @@ class Tile {
     }
 
     getOpSymbol() {
-        switch (this.type) {
-            case 'negative': return '−';
-            case 'multiply': return '×';
-            case 'divide':   return '÷';
-            default:         return '+';
-        }
+        return this.type === 'negative' ? '−' : '+';
     }
 
     toJSON() {
@@ -240,8 +235,6 @@ class ArithmaniacGame {
         this.score = 0;
         this.bestScore = 0;
         this.movesLeft = GAME_CONFIG.INITIAL_MOVES;
-        this.combo = 1;
-        this.maxCombo = 1;
         this.targetsCleared = 0;
 
         this.targetCards = [];
@@ -267,7 +260,6 @@ class ArithmaniacGame {
         this.gridContainer = document.getElementById('grid-container');
         this.targetsList = document.getElementById('targets-list');
         this.scoreDisplay = document.getElementById('score-display');
-        this.comboDisplay = document.getElementById('combo-display');
         this.movesDisplay = document.getElementById('moves-display');
         this.healthBarFill = document.getElementById('health-bar-fill');
         this.movesCard = document.getElementById('moves-card');
@@ -381,8 +373,6 @@ class ArithmaniacGame {
             targetCards: [...this.targetCards],
             score: this.score,
             movesLeft: this.movesLeft,
-            combo: this.combo,
-            maxCombo: this.maxCombo,
             targetsCleared: this.targetsCleared
         };
         this.undoStack.push(snapshot);
@@ -404,15 +394,12 @@ class ArithmaniacGame {
         this.targetCards = [...prev.targetCards];
         this.score = prev.score;
         this.movesLeft = prev.movesLeft;
-        this.combo = prev.combo;
-        this.maxCombo = prev.maxCombo;
         this.targetsCleared = prev.targetsCleared;
 
         this.selectedIdx = null;
         this.lastDestinationIdx = null;
 
         this.scoreDisplay.textContent = this.score.toString();
-        this.comboDisplay.textContent = `x${this.combo}`;
         this.updateMovesDisplay();
         this.updateUndoBadge();
         this.renderGrid();
@@ -430,8 +417,6 @@ class ArithmaniacGame {
             targetCards: this.targetCards,
             score: this.score,
             movesLeft: this.movesLeft,
-            combo: this.combo,
-            maxCombo: this.maxCombo,
             targetsCleared: this.targetsCleared,
             undoCount: this.undoCount
         };
@@ -449,13 +434,10 @@ class ArithmaniacGame {
             this.targetCards = data.targetCards || [];
             this.score = data.score || 0;
             this.movesLeft = data.movesLeft || GAME_CONFIG.INITIAL_MOVES;
-            this.combo = data.combo || 1;
-            this.maxCombo = data.maxCombo || 1;
             this.targetsCleared = data.targetsCleared || 0;
             this.undoCount = data.undoCount !== undefined ? data.undoCount : GAME_CONFIG.MAX_UNDO_PER_GAME;
 
             this.scoreDisplay.textContent = this.score.toString();
-            this.comboDisplay.textContent = `x${this.combo}`;
             this.updateMovesDisplay();
             this.updateUndoBadge();
             this.renderGrid();
@@ -486,8 +468,6 @@ class ArithmaniacGame {
     startNewGame() {
         this.score = 0;
         this.movesLeft = GAME_CONFIG.INITIAL_MOVES;
-        this.combo = 1;
-        this.maxCombo = 1;
         this.targetsCleared = 0;
         this.undoCount = GAME_CONFIG.MAX_UNDO_PER_GAME;
         this.undoStack = [];
@@ -495,7 +475,6 @@ class ArithmaniacGame {
         this.lastDestinationIdx = null;
 
         this.scoreDisplay.textContent = '0';
-        this.comboDisplay.textContent = 'x1';
         this.updateMovesDisplay();
         this.updateUndoBadge();
 
@@ -529,22 +508,10 @@ class ArithmaniacGame {
                 if (diff >= 1 && diff <= GAME_CONFIG.SMART_ADD_MAX_DIFF) {
                     candidates.push(new Tile({ val: Math.round(diff), type: 'normal' }));
                 }
-                if (boardVal > 0 && targetVal % boardVal === 0) {
-                    const mult = targetVal / boardVal;
-                    if (mult >= GAME_CONFIG.SMART_MULT_MIN && mult <= GAME_CONFIG.SMART_MULT_MAX) {
-                        candidates.push(new Tile({ val: mult, type: 'multiply' }));
-                    }
-                }
             } else if (boardVal > targetVal) {
                 const subDiff = boardVal - targetVal;
                 if (subDiff >= 1 && subDiff <= GAME_CONFIG.SMART_SUB_MAX_DIFF) {
                     candidates.push(new Tile({ val: Math.round(subDiff), type: 'negative' }));
-                }
-                if (targetVal > 0) {
-                    const divFactor = Math.ceil(boardVal / targetVal);
-                    if (divFactor >= GAME_CONFIG.SMART_DIV_MIN && divFactor <= GAME_CONFIG.SMART_DIV_MAX) {
-                        candidates.push(new Tile({ val: divFactor, type: 'divide' }));
-                    }
                 }
             }
 
@@ -558,15 +525,9 @@ class ArithmaniacGame {
             if (randType < GAME_CONFIG.PROB_NORMAL) {
                 const val = Math.floor(Math.random() * (GAME_CONFIG.NORMAL_TILE_MAX - GAME_CONFIG.NORMAL_TILE_MIN + 1)) + GAME_CONFIG.NORMAL_TILE_MIN;
                 spawnedTile = new Tile({ val, type: 'normal' });
-            } else if (randType < GAME_CONFIG.PROB_NEGATIVE) {
+            } else {
                 const val = Math.floor(Math.random() * (GAME_CONFIG.NEGATIVE_TILE_MAX - GAME_CONFIG.NEGATIVE_TILE_MIN + 1)) + GAME_CONFIG.NEGATIVE_TILE_MIN;
                 spawnedTile = new Tile({ val, type: 'negative' });
-            } else if (randType < GAME_CONFIG.PROB_MULTIPLY) {
-                const mults = GAME_CONFIG.MULTIPLY_VALUES;
-                spawnedTile = new Tile({ val: mults[Math.floor(Math.random() * mults.length)], type: 'multiply' });
-            } else {
-                const divs = GAME_CONFIG.DIVIDE_VALUES;
-                spawnedTile = new Tile({ val: divs[Math.floor(Math.random() * divs.length)], type: 'divide' });
             }
         }
 
@@ -640,21 +601,13 @@ class ArithmaniacGame {
 
         let rawResult = null;
 
+        // If either tile is negative, subtract its value
         if (tB.type === 'negative') {
             rawResult = Math.abs(tA.val) - Math.abs(tB.val);
-        } else if (tA.type === 'negative' && tB.type !== 'negative') {
+        } else if (tA.type === 'negative') {
             rawResult = Math.abs(tA.val) - Math.abs(tB.val);
-        } else if (tB.type === 'multiply') {
-            rawResult = Math.abs(tA.val) * Math.abs(tB.val);
-        } else if (tA.type === 'multiply' && tB.type !== 'multiply') {
-            rawResult = Math.abs(tA.val) * Math.abs(tB.val);
-        } else if (tB.type === 'divide') {
-            if (tB.val === 0) return null;
-            rawResult = Math.ceil(Math.abs(tA.val) / Math.abs(tB.val));
-        } else if (tA.type === 'divide' && tB.type !== 'divide') {
-            if (tA.val === 0) return null;
-            rawResult = Math.ceil(Math.abs(tB.val) / Math.abs(tA.val));
         } else {
+            // Both are normal (+) tiles — add
             rawResult = Math.abs(tA.val) + Math.abs(tB.val);
         }
 
@@ -741,13 +694,6 @@ class ArithmaniacGame {
         } else {
             this.movesLeft = Math.max(0, this.movesLeft - GAME_CONFIG.MOVE_COST);
             this.lastDestinationIdx = idx;
-
-            const hadCombo = this.combo > 1;
-            this.combo = 1;
-            this.comboDisplay.textContent = 'x1';
-            if (hadCombo) {
-                this.showToast('Combo Reset', 'error');
-            }
         }
 
         const countToSpawn = wasTargetMatched ? GAME_CONFIG.TILES_SPAWNED_ON_HIT : GAME_CONFIG.TILES_SPAWNED_ON_MISS;
@@ -778,17 +724,13 @@ class ArithmaniacGame {
             targetEls[targetIdx].classList.add('matched');
         }
 
-        const bonus = Math.round(targetValue * GAME_CONFIG.SCORE_MULTIPLIER) * this.combo;
+        const bonus = Math.round(targetValue * GAME_CONFIG.SCORE_MULTIPLIER);
         this.score += bonus;
         this.scoreDisplay.textContent = this.score.toString();
 
         const extraMoves = GAME_CONFIG.TARGET_REWARD;
         this.movesLeft = Math.min(GAME_CONFIG.MAX_MOVES_CAP, this.movesLeft + extraMoves);
         this.updateMovesDisplay();
-
-        this.combo++;
-        if (this.combo > this.maxCombo) this.maxCombo = this.combo;
-        this.comboDisplay.textContent = `x${this.combo}`;
 
         this.saveBestScore();
         this.showToast(`+${bonus}`, 'success');
@@ -813,7 +755,6 @@ class ArithmaniacGame {
 
         document.getElementById('final-score').textContent = this.score.toString();
         document.getElementById('final-targets').textContent = this.targetsCleared.toString();
-        document.getElementById('final-max-combo').textContent = `x${this.maxCombo}`;
         this.toggleModal(this.gameoverModal, true);
     }
 

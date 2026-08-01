@@ -11,11 +11,11 @@ const GAME_CONFIG = Object.freeze({
     INITIAL_FILL_RATIO: 0.45,       // Initial grid fill percentage (0–1)
 
     // ── Moves / Health System ──────────────────────────────────
-    INITIAL_MOVES: 10,              // Starting moves / health
+    INITIAL_MOVES: 5,              // Starting moves / health
     MAX_MOVES_CAP: 30,              // Maximum health capacity
     MOVE_COST: 1,                   // Moves deducted per non-target operation
     TARGET_REWARD: 2,               // Moves awarded per target match
-    LOW_MOVES_THRESHOLD: 3,         // Low moves alert threshold
+    LOW_MOVES_THRESHOLD: 2,         // Low moves alert threshold
 
     // ── Spawning Rules ────────────────────────────────────────
     TILES_SPAWNED_ON_HIT: 1,        // Spawns on target match
@@ -34,28 +34,18 @@ const GAME_CONFIG = Object.freeze({
     NEGATIVE_TILE_MIN: 1,
     NEGATIVE_TILE_MAX: 6,
 
-    MULTIPLY_VALUES: [2, 3, 4],
-    DIVIDE_VALUES: [2, 3, 4],
-
-    // Spawn probabilities (cumulative thresholds)
-    PROB_NORMAL:    0.40,           // Addition (+)
-    PROB_NEGATIVE:  0.65,           // Subtraction (−)
-    PROB_MULTIPLY:  0.85,           // Multiplication (×)
-    // Division (÷) accounts for remaining 0.15
+    // Spawn probability threshold (normal below, negative above)
+    PROB_NORMAL: 0.50,              // 50% Addition (+), 50% Subtraction (−)
 
     // Smart-spawn bounds
     SMART_ADD_MAX_DIFF: 12,
-    SMART_MULT_MIN: 2,
-    SMART_MULT_MAX: 5,
     SMART_SUB_MAX_DIFF: 10,
-    SMART_DIV_MIN: 2,
-    SMART_DIV_MAX: 6,
 
     // Fallback target numbers when board derivation fails
-    FALLBACK_TARGETS: [2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 15, 16, 18, 20, 24],
+    FALLBACK_TARGETS: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
 
     // ── Scoring & UX ──────────────────────────────────────────
-    SCORE_MULTIPLIER: 10,           // Score = targetValue × SCORE_MULTIPLIER × combo
+    SCORE_MULTIPLIER: 10,           // Score = targetValue × SCORE_MULTIPLIER
     MAX_UNDO_PER_GAME: 3,           // Maximum undo moves per game session
     HAPTICS_ENABLED: true,          // Haptic vibration feedback for mobile
 
