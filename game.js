@@ -24,7 +24,9 @@ class Tile {
     }
 
     getDisplayString() {
-        return this._display || formatNum(this.val);
+        if (this._display) return this._display;
+        const numStr = formatNum(this.val);
+        return this.type === 'negative' ? `−${numStr}` : numStr;
     }
 
     getOpSymbol() {
@@ -460,8 +462,10 @@ class ArithmaniacGame {
 
         if (this.movesLeft <= GAME_CONFIG.LOW_MOVES_THRESHOLD && this.movesLeft > 0) {
             this.movesCard.classList.add('danger');
+            document.body.classList.add('danger-state');
         } else {
             this.movesCard.classList.remove('danger');
+            document.body.classList.remove('danger-state');
         }
     }
 
@@ -690,7 +694,7 @@ class ArithmaniacGame {
         if (matchedTargetIdx !== -1) {
             wasTargetMatched = true;
             this.lastDestinationIdx = idx;
-            this.handleTargetMatch(matchedTargetIdx, resultNumeric);
+            this.handleTargetMatch(matchedTargetIdx, resultNumeric, idx);
         } else {
             this.movesLeft = Math.max(0, this.movesLeft - GAME_CONFIG.MOVE_COST);
             this.lastDestinationIdx = idx;
@@ -712,7 +716,18 @@ class ArithmaniacGame {
         }
     }
 
-    handleTargetMatch(targetIdx, targetValue) {
+    showFloatingPopup(x, y, mainText, subText = null) {
+        if (!x || !y) return;
+        const popup = document.createElement('div');
+        popup.className = 'floating-popup';
+        popup.style.left = `${x}px`;
+        popup.style.top = `${y}px`;
+        popup.innerHTML = `<span class="float-score">${mainText}</span>` + (subText ? `<span class="float-moves">${subText}</span>` : '');
+        document.body.appendChild(popup);
+        setTimeout(() => popup.remove(), 1300);
+    }
+
+    handleTargetMatch(targetIdx, targetValue, destinationIdx = null) {
         this.targetsCleared++;
         this.audio.playTargetMatched();
         this.haptics.trigger([30, 40, 60]);
@@ -734,6 +749,16 @@ class ArithmaniacGame {
 
         this.saveBestScore();
         this.showToast(`+${bonus}`, 'success');
+
+        // Floating score/moves popup at tap location
+        if (destinationIdx !== null) {
+            const cellEl = document.querySelector(`.grid-cell[data-index="${destinationIdx}"]`);
+            if (cellEl) {
+                const rect = cellEl.getBoundingClientRect();
+                this.showFloatingPopup(rect.left + rect.width / 2, rect.top + rect.height / 2, `+${bonus}`, `+${extraMoves} MOVES!`);
+                this.particles.burst(rect.left + rect.width / 2, rect.top + rect.height / 2, '#f59e0b', 14);
+            }
+        }
 
         setTimeout(() => {
             const newTarget = this.generateSmartTarget();
@@ -800,11 +825,6 @@ class ArithmaniacGame {
             } else {
                 cell.classList.add(`tile-${tile.type}`);
                 cell.textContent = tile.getDisplayString();
-
-                const badge = document.createElement('span');
-                badge.className = 'tile-op-badge';
-                badge.textContent = tile.getOpSymbol();
-                cell.appendChild(badge);
 
                 if (idx === this.selectedIdx) {
                     cell.classList.add('selected');
