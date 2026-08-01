@@ -9,6 +9,24 @@ function formatNum(val) {
     return Math.round(val).toString();
 }
 
+// Random Number & Array Utilities
+function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function getRandomElement(arr) {
+    if (!arr || arr.length === 0) return null;
+    return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
 /**
  * Tile Data Structure
  */
@@ -38,8 +56,7 @@ class Tile {
     }
 
     static fromJSON(obj) {
-        if (!obj) return null;
-        return new Tile(obj);
+        return obj ? new Tile(obj) : null;
     }
 }
 
@@ -58,6 +75,8 @@ function toTileObj(item) {
 /**
  * Synthesizer Audio Engine (Web Audio API)
  */
+const UNLOCK_EVENTS = ['pointerdown', 'keydown', 'touchstart', 'click'];
+
 class AudioEngine {
     constructor() {
         this.ctx = null;
@@ -78,15 +97,10 @@ class AudioEngine {
                 this.init();
             }
             if (this.ctx && this.ctx.state === 'running') {
-                ['pointerdown', 'keydown', 'touchstart', 'click'].forEach(evt => {
-                    window.removeEventListener(evt, unlock);
-                });
+                UNLOCK_EVENTS.forEach(evt => window.removeEventListener(evt, unlock));
             }
         };
-
-        ['pointerdown', 'keydown', 'touchstart', 'click'].forEach(evt => {
-            window.addEventListener(evt, unlock);
-        });
+        UNLOCK_EVENTS.forEach(evt => window.addEventListener(evt, unlock));
     }
 
     init() {
@@ -105,11 +119,10 @@ class AudioEngine {
     playTone(freq, type = 'sine', duration = 0.1, gainVal = 0.08) {
         if (!this.enabled) return;
         if (!this.ctx) this.init();
-        if (!this.ctx) return;
+        if (!this.ctx || this.ctx.state === 'closed') return;
         if (this.ctx.state === 'suspended') {
             this.ctx.resume().catch(() => {});
         }
-        if (this.ctx.state === 'closed') return;
         try {
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
@@ -200,6 +213,7 @@ class ParticleEngine {
     animate() {
         if (!this.ctx) return;
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
             p.x += p.vx;
@@ -212,14 +226,13 @@ class ParticleEngine {
                 continue;
             }
 
-            this.ctx.save();
             this.ctx.globalAlpha = p.alpha;
             this.ctx.fillStyle = p.color;
             this.ctx.beginPath();
             this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
             this.ctx.fill();
-            this.ctx.restore();
         }
+        this.ctx.globalAlpha = 1;
         requestAnimationFrame(() => this.animate());
     }
 }
@@ -242,8 +255,6 @@ class ArithmaniacGame {
         this.targetCards = [];
         this.undoStack = [];
         this.undoCount = GAME_CONFIG.MAX_UNDO_PER_GAME;
-
-        this.hapticsEnabled = true;
 
         this.audio = new AudioEngine();
         this.haptics = new HapticEngine();
@@ -276,6 +287,16 @@ class ArithmaniacGame {
 
         this.soundText = document.getElementById('sound-text');
         this.hapticsText = document.getElementById('haptics-text');
+
+        this.settingsBtn = document.getElementById('settings-btn');
+        this.closeSettingsBtn = document.getElementById('close-settings');
+        this.soundToggleBtn = document.getElementById('sound-toggle-btn');
+        this.hapticsToggleBtn = document.getElementById('haptics-toggle-btn');
+        this.menuRestartBtn = document.getElementById('menu-restart-btn');
+        this.menuHelpBtn = document.getElementById('menu-help-btn');
+        this.closeHelpBtn = document.getElementById('close-help');
+        this.startPlayingBtn = document.getElementById('start-playing-btn');
+        this.playAgainBtn = document.getElementById('play-again-btn');
     }
 
     bindEvents() {
@@ -290,11 +311,11 @@ class ArithmaniacGame {
 
         // Top Header Actions
         this.undoBtn.addEventListener('click', () => this.undoMove());
-        document.getElementById('settings-btn').addEventListener('click', () => this.toggleModal(this.settingsModal, true));
-        document.getElementById('close-settings').addEventListener('click', () => this.toggleModal(this.settingsModal, false));
+        this.settingsBtn.addEventListener('click', () => this.toggleModal(this.settingsModal, true));
+        this.closeSettingsBtn.addEventListener('click', () => this.toggleModal(this.settingsModal, false));
 
         // Settings Items
-        document.getElementById('sound-toggle-btn').addEventListener('click', () => {
+        this.soundToggleBtn.addEventListener('click', () => {
             this.audio.enabled = !this.audio.enabled;
             localStorage.setItem(GAME_CONFIG.STORAGE_SOUND_SETTING, this.audio.enabled.toString());
             this.soundText.textContent = `Sound Effects: ${this.audio.enabled ? 'ON' : 'OFF'}`;
@@ -302,29 +323,29 @@ class ArithmaniacGame {
             this.haptics.trigger(15);
         });
 
-        document.getElementById('haptics-toggle-btn').addEventListener('click', () => {
+        this.hapticsToggleBtn.addEventListener('click', () => {
             this.haptics.enabled = !this.haptics.enabled;
             this.hapticsText.textContent = `Haptics: ${this.haptics.enabled ? 'ON' : 'OFF'}`;
             this.showToast(this.haptics.enabled ? 'Haptics On' : 'Haptics Off');
             if (this.haptics.enabled) this.haptics.trigger(30);
         });
 
-        document.getElementById('menu-restart-btn').addEventListener('click', () => {
+        this.menuRestartBtn.addEventListener('click', () => {
             this.toggleModal(this.settingsModal, false);
             this.startNewGame();
         });
 
-        document.getElementById('menu-help-btn').addEventListener('click', () => {
+        this.menuHelpBtn.addEventListener('click', () => {
             this.toggleModal(this.settingsModal, false);
             this.toggleModal(this.helpModal, true);
         });
 
         // Help Modal Controls
-        document.getElementById('close-help').addEventListener('click', () => this.toggleModal(this.helpModal, false));
-        document.getElementById('start-playing-btn').addEventListener('click', () => this.toggleModal(this.helpModal, false));
+        this.closeHelpBtn.addEventListener('click', () => this.toggleModal(this.helpModal, false));
+        this.startPlayingBtn.addEventListener('click', () => this.toggleModal(this.helpModal, false));
 
         // Game Over Modal Action
-        document.getElementById('play-again-btn').addEventListener('click', () => {
+        this.playAgainBtn.addEventListener('click', () => {
             this.toggleModal(this.gameoverModal, false);
             this.startNewGame();
         });
@@ -369,9 +390,13 @@ class ArithmaniacGame {
         this.undoBtn.style.opacity = this.undoStack.length > 0 && this.undoCount > 0 ? '1' : '0.4';
     }
 
+    serializeGrid() {
+        return this.grid.map(t => (t ? t.toJSON() : null));
+    }
+
     saveSnapshot() {
         const snapshot = {
-            grid: this.grid.map(t => (t ? t.toJSON() : null)),
+            grid: this.serializeGrid(),
             targetCards: [...this.targetCards],
             score: this.score,
             movesLeft: this.movesLeft,
@@ -391,7 +416,7 @@ class ArithmaniacGame {
 
         const prev = this.undoStack.pop();
         this.undoCount--;
-        
+
         this.grid = prev.grid.map(t => Tile.fromJSON(t));
         this.targetCards = [...prev.targetCards];
         this.score = prev.score;
@@ -415,7 +440,7 @@ class ArithmaniacGame {
 
     saveGameState() {
         const state = {
-            grid: this.grid.map(t => (t ? t.toJSON() : null)),
+            grid: this.serializeGrid(),
             targetCards: this.targetCards,
             score: this.score,
             movesLeft: this.movesLeft,
@@ -431,7 +456,7 @@ class ArithmaniacGame {
         try {
             const data = JSON.parse(raw);
             if (!data || !Array.isArray(data.grid) || data.movesLeft <= 0) return false;
-            
+
             this.grid = data.grid.map(t => Tile.fromJSON(t));
             this.targetCards = data.targetCards || [];
             this.score = data.score || 0;
@@ -497,14 +522,14 @@ class ArithmaniacGame {
     }
 
     generateTileValue() {
-        const activeTiles = this.grid.filter(v => v !== null).map(toTileObj);
+        const activeTiles = this.grid.filter(Boolean);
         const activeTargets = this.targetCards;
         let spawnedTile = null;
 
         if (activeTiles.length > 0 && activeTargets.length > 0 && Math.random() < GAME_CONFIG.SMART_SPAWN_CHANCE) {
-            const targetVal = activeTargets[Math.floor(Math.random() * activeTargets.length)];
-            const boardTile = activeTiles[Math.floor(Math.random() * activeTiles.length)];
-            const boardVal = Math.abs(boardTile.val);
+            const targetVal = getRandomElement(activeTargets);
+            const boardTile = getRandomElement(activeTiles);
+            const boardVal = boardTile.val;
             const candidates = [];
 
             if (targetVal > boardVal) {
@@ -520,17 +545,16 @@ class ArithmaniacGame {
             }
 
             if (candidates.length > 0) {
-                spawnedTile = candidates[Math.floor(Math.random() * candidates.length)];
+                spawnedTile = getRandomElement(candidates);
             }
         }
 
         if (!spawnedTile) {
-            const randType = Math.random();
-            if (randType < GAME_CONFIG.PROB_NORMAL) {
-                const val = Math.floor(Math.random() * (GAME_CONFIG.NORMAL_TILE_MAX - GAME_CONFIG.NORMAL_TILE_MIN + 1)) + GAME_CONFIG.NORMAL_TILE_MIN;
+            if (Math.random() < GAME_CONFIG.PROB_NORMAL) {
+                const val = getRandomInt(GAME_CONFIG.NORMAL_TILE_MIN, GAME_CONFIG.NORMAL_TILE_MAX);
                 spawnedTile = new Tile({ val, type: 'normal' });
             } else {
-                const val = Math.floor(Math.random() * (GAME_CONFIG.NEGATIVE_TILE_MAX - GAME_CONFIG.NEGATIVE_TILE_MIN + 1)) + GAME_CONFIG.NEGATIVE_TILE_MIN;
+                const val = getRandomInt(GAME_CONFIG.NEGATIVE_TILE_MIN, GAME_CONFIG.NEGATIVE_TILE_MAX);
                 spawnedTile = new Tile({ val, type: 'negative' });
             }
         }
@@ -545,30 +569,30 @@ class ArithmaniacGame {
 
     spawnRandomTile(silent = false) {
         const emptyIndices = [];
-        this.grid.forEach((val, idx) => {
-            if (val === null) emptyIndices.push(idx);
-        });
+        for (let i = 0; i < this.grid.length; i++) {
+            if (this.grid[i] === null) emptyIndices.push(i);
+        }
 
         if (emptyIndices.length === 0) return null;
 
-        const randomIdx = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+        const randomIdx = getRandomElement(emptyIndices);
         this.grid[randomIdx] = this.generateTileValue();
         return randomIdx;
     }
 
     generateSmartTarget() {
-        const activeTiles = this.grid.filter(v => v !== null).map(toTileObj);
-        const activeGridValues = new Set(activeTiles.map(t => Math.abs(t.val)));
+        const activeTiles = this.grid.filter(Boolean);
+        const activeGridValues = new Set(activeTiles.map(t => t.val));
 
         if (activeTiles.length >= 2) {
-            const shuffled = [...activeTiles].sort(() => Math.random() - 0.5);
+            const shuffled = shuffleArray([...activeTiles]);
             for (let i = 0; i < shuffled.length; i++) {
                 for (let j = 0; j < shuffled.length; j++) {
                     if (i === j) continue;
                     const resTile = this.executeOperation(shuffled[i], shuffled[j]);
-                    if (resTile && resTile.getNumericValue() > 0) {
-                        const candidateVal = Math.round(resTile.getNumericValue());
-                        if (!activeGridValues.has(candidateVal) && !this.targetCards.includes(candidateVal)) {
+                    if (resTile) {
+                        const candidateVal = resTile.val;
+                        if (candidateVal > 0 && !activeGridValues.has(candidateVal) && !this.targetCards.includes(candidateVal)) {
                             return candidateVal;
                         }
                     }
@@ -578,10 +602,10 @@ class ArithmaniacGame {
 
         const validFallbacks = GAME_CONFIG.FALLBACK_TARGETS.filter(val => !activeGridValues.has(val) && !this.targetCards.includes(val));
         if (validFallbacks.length > 0) {
-            return validFallbacks[Math.floor(Math.random() * validFallbacks.length)];
+            return getRandomElement(validFallbacks);
         }
 
-        let fallback = Math.floor(Math.random() * 15) + 5;
+        let fallback = getRandomInt(5, 19);
         while (activeGridValues.has(fallback) || this.targetCards.includes(fallback)) {
             fallback++;
         }
@@ -603,19 +627,11 @@ class ArithmaniacGame {
         const tB = toTileObj(tileB);
         if (!tA || !tB) return null;
 
-        let rawResult = null;
-
         // If either tile is negative, subtract its value
-        if (tB.type === 'negative') {
-            rawResult = Math.abs(tA.val) - Math.abs(tB.val);
-        } else if (tA.type === 'negative') {
-            rawResult = Math.abs(tA.val) - Math.abs(tB.val);
-        } else {
-            // Both are normal (+) tiles — add
-            rawResult = Math.abs(tA.val) + Math.abs(tB.val);
-        }
+        const isSubtract = tA.type === 'negative' || tB.type === 'negative';
+        const rawResult = isSubtract ? tA.val - tB.val : tA.val + tB.val;
 
-        if (rawResult === null || isNaN(rawResult) || !isFinite(rawResult)) return null;
+        if (!Number.isFinite(rawResult)) return null;
 
         let finalVal = Math.abs(rawResult);
         if (finalVal <= 0) finalVal = 1;
@@ -623,7 +639,6 @@ class ArithmaniacGame {
 
         return new Tile({ val: Math.round(finalVal), type: 'normal' });
     }
-
 
     handleTileClick(idx) {
         if (this.movesLeft <= 0) return;
@@ -689,7 +704,7 @@ class ArithmaniacGame {
         const resultNumeric = resultTile.getNumericValue();
         const matchedTargetIdx = this.targetCards.findIndex(t => Math.abs(t - resultNumeric) < 0.001);
         let wasTargetMatched = false;
-        let spawnedIndices = [];
+        const spawnedIndices = [];
 
         if (matchedTargetIdx !== -1) {
             wasTargetMatched = true;
@@ -769,7 +784,7 @@ class ArithmaniacGame {
     }
 
     isBoardStuck() {
-        const activeCount = this.grid.filter(v => v !== null).length;
+        const activeCount = this.grid.filter(Boolean).length;
         return activeCount === this.gridSize * this.gridSize && this.movesLeft <= 0;
     }
 
@@ -798,29 +813,29 @@ class ArithmaniacGame {
 
     renderTargets() {
         this.targetsList.innerHTML = '';
-        this.targetCards.forEach(val => {
+        const fragment = document.createDocumentFragment();
+        for (let i = 0; i < this.targetCards.length; i++) {
+            const val = this.targetCards[i];
             const card = document.createElement('div');
             card.className = 'target-card';
-            const displayVal = formatNum(val);
-            card.innerHTML = `
-                <span class="target-value">${displayVal}</span>
-            `;
-            this.targetsList.appendChild(card);
-        });
+            card.innerHTML = `<span class="target-value">${formatNum(val)}</span>`;
+            fragment.appendChild(card);
+        }
+        this.targetsList.appendChild(fragment);
     }
 
     renderGrid(mergedIdx = null, spawnedIndices = []) {
         this.gridContainer.innerHTML = '';
-        const spawnedList = Array.isArray(spawnedIndices) ? spawnedIndices : [];
+        const fragment = document.createDocumentFragment();
+        const spawnedSet = new Set(Array.isArray(spawnedIndices) ? spawnedIndices : []);
 
-        this.grid.forEach((rawItem, idx) => {
+        for (let idx = 0; idx < this.grid.length; idx++) {
+            const tile = this.grid[idx];
             const cell = document.createElement('div');
             cell.className = 'grid-cell';
             cell.dataset.index = idx.toString();
-            
-            const tile = toTileObj(rawItem);
 
-            if (tile === null) {
+            if (!tile) {
                 cell.classList.add('empty');
             } else {
                 cell.classList.add(`tile-${tile.type}`);
@@ -835,13 +850,14 @@ class ArithmaniacGame {
                 if (idx === mergedIdx) {
                     cell.classList.add('tile-merged');
                 }
-                if (spawnedList.includes(idx)) {
+                if (spawnedSet.has(idx)) {
                     cell.classList.add('tile-spawn');
                 }
             }
 
-            this.gridContainer.appendChild(cell);
-        });
+            fragment.appendChild(cell);
+        }
+        this.gridContainer.appendChild(fragment);
     }
 }
 
