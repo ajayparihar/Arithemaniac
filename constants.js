@@ -19,7 +19,7 @@ const GAME_CONFIG = Object.freeze({
 
     // ── Spawning Rules ────────────────────────────────────────
     TILES_SPAWNED_ON_HIT: 1,        // Spawns on target match
-    TILES_SPAWNED_ON_MISS: 1,       // Spawns on non-target operation
+    TILES_SPAWNED_ON_MISS: 2,       // Spawns on non-target operation
 
     // ── Target Cards ─────────────────────────────────────────
     NUM_TARGETS: 2,                 // Active targets count shown at top
