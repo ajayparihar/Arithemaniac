@@ -11,10 +11,10 @@ const GAME_CONFIG = Object.freeze({
     INITIAL_FILL_RATIO: 0.45,       // Initial grid fill percentage (0–1)
 
     // ── Moves / Health System ──────────────────────────────────
-    INITIAL_MOVES: 5,              // Starting moves / health
-    MAX_MOVES_CAP: 30,              // Maximum health capacity
+    INITIAL_MOVES: 3,              // Starting moves / health
+    MAX_MOVES_CAP: 10,              // Maximum health capacity
     MOVE_COST: 1,                   // Moves deducted per non-target operation
-    TARGET_REWARD: 2,               // Moves awarded per target match
+    TARGET_REWARD: 1,               // Moves awarded per target match
     LOW_MOVES_THRESHOLD: 2,         // Low moves alert threshold
 
     // ── Spawning Rules ────────────────────────────────────────
