@@ -22,14 +22,14 @@ const GAME_CONFIG = Object.freeze({
     TILES_SPAWNED_ON_MISS: 1,       // Spawns on non-target operation
 
     // ── Target Cards ─────────────────────────────────────────
-    NUM_TARGETS: 3,                 // Active targets count shown at top
+    NUM_TARGETS: 2,                 // Active targets count shown at top
 
     // ── Tile Generation & Smart Spawning ─────────────────────
-    SMART_SPAWN_CHANCE: 0.65,       // Probability of board-derived smart tile spawn
+    SMART_SPAWN_CHANCE: 0.45,       // Probability of board-derived smart tile spawn
 
     // Tile value boundaries
     NORMAL_TILE_MIN: 1,
-    NORMAL_TILE_MAX: 8,
+    NORMAL_TILE_MAX: 6,
 
     NEGATIVE_TILE_MIN: 1,
     NEGATIVE_TILE_MAX: 6,
@@ -38,7 +38,7 @@ const GAME_CONFIG = Object.freeze({
     PROB_NORMAL: 0.50,              // 50% Addition (+), 50% Subtraction (−)
 
     // Smart-spawn bounds
-    SMART_ADD_MAX_DIFF: 12,
+    SMART_ADD_MAX_DIFF: 10,
     SMART_SUB_MAX_DIFF: 10,
 
     // Fallback target numbers when board derivation fails
@@ -46,7 +46,7 @@ const GAME_CONFIG = Object.freeze({
 
     // ── Scoring & UX ──────────────────────────────────────────
     SCORE_MULTIPLIER: 10,           // Score = targetValue × SCORE_MULTIPLIER
-    MAX_UNDO_PER_GAME: 3,           // Maximum undo moves per game session
+    MAX_UNDO_PER_GAME: 1,           // Maximum undo moves per game session
     HAPTICS_ENABLED: true,          // Haptic vibration feedback for mobile
 
     // ── Visual Particle FX ─────────────────────────────────────
@@ -60,7 +60,7 @@ const GAME_CONFIG = Object.freeze({
 
     // ── Timings ───────────────────────────────────────────────
     GAMEOVER_DELAY_MS: 400,
-    TARGET_REPLACE_DELAY_MS: 250,
+    TARGET_REPLACE_DELAY_MS: 400,
     TOAST_DURATION_MS: 1100,
-    TOAST_FADE_MS: 200,
+    TOAST_FADE_MS: 400,
 });
